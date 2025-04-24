@@ -18,7 +18,7 @@ def wei_to_eth(wei_value):
     """
     Convert a wei value to its equivalent in Ethereum.
     """
-    eth_value = w3.from_wei(float(wei_value), 'ether')
+    eth_value = w3.from_wei(int(wei_value), 'ether')
     return eth_value
 
 def round_to_decimals(value, decimal_places=6):
