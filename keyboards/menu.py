@@ -1,8 +1,11 @@
 import re
 from aiogram import F, Router
 from aiogram.filters.callback_data import CallbackData
-from aiogram.utils.keyboard import ReplyKeyboardBuilder, InlineKeyboardBuilder
+from aiogram.utils.keyboard import InlineKeyboardBuilder
+from aiogram.types import InlineKeyboardMarkup, InlineKeyboardButton
 from typing import Optional
+
+from datatypes.constants import Network
 
 router = Router()
 
@@ -27,3 +30,12 @@ def generate_new_user_menu():
     markup.button(text="📤 Import", callback_data="wallet_import")
     markup.adjust(2)
     return markup.as_markup()
+
+def view_on_bubblemaps(address: str, chain: Network):
+    url = f"https://app.bubblemaps.io/{chain}/token/{address}?mode=0"
+    markup = InlineKeyboardMarkup(
+        inline_keyboard=[
+            [InlineKeyboardButton(text="🔎 View on Bubblemaps", url=url)]
+        ]
+    )
+    return markup
