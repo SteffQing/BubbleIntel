@@ -1,13 +1,19 @@
+from playwright.sync_api import sync_playwright
+
 from services.httpx import get_client
 from utils.constants import Network
-from playwright.sync_api import sync_playwright
+from utils.types import AvailabilityResponse
 
 class BubbleMap:
     async def isIframeAvailable(self, token: str, chain: Network):
         url= f"https://api-legacy.bubblemaps.io/map-availability?chain={chain}&token={token}"
         client = get_client()
-        is_available = await client.get(url)
-        return is_available.json()
+        response = await client.get(url)
+        is_available: AvailabilityResponse = response.json()
+        if is_available["status"] is "OK":
+            return is_available["availability"]
+        else: 
+            return False
         
     # This method returns only the bubblemap, takes 10 seconds at average
     def screenshot_bubblemap(self, token_address: str, chain: Network ='eth'):
