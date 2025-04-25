@@ -1,10 +1,10 @@
 from playwright.async_api import async_playwright
+from io import BytesIO
 
 from services.httpx import get_client
-from utils.constants import cexs
 from datatypes.constants import Network
-from datatypes.bubblemap import AvailabilityResponse, BubbleMapData, Node, ScoreResponse
-from utils.index import truncate_address
+from datatypes.bubblemap import AvailabilityResponse, BubbleMapData, ScoreResponse
+from utils.index import format_large_number, truncate_address
 
 class BubbleMap:
     async def isIframeAvailable(self, token: str, chain: Network):
@@ -44,7 +44,6 @@ class BubbleMap:
     # This method shows the full bubblemap and also includes the wallet list for users to see
     async def screenshot_bubblemap(self, token_address: str, chain: Network):
         url = f"https://app.bubblemaps.io/{chain}/token/{token_address}?hide_context&small_text&prevent_scroll_zoom&mode=0"
-        out_path = f"bubblemap/{token_address}.png"
 
         async with async_playwright() as p:
             browser = await p.chromium.launch(headless=True)
@@ -59,79 +58,87 @@ class BubbleMap:
             except:
                 pass
                 
+            screenshot_bytes = b""
             try:
                 svg = await page.wait_for_selector("svg#svg", timeout=20000)
                 await page.wait_for_timeout(2000)
                 if svg:
-                    await svg.screenshot(path=out_path)
+                    # await svg.screenshot(path=image_bytes)
+                    screenshot_bytes = await svg.screenshot(type="png")
+
             finally:
                 await browser.close()
+                
+            image_bytes = BytesIO(screenshot_bytes)
+            image_bytes.seek(0)
+            return image_bytes
             
-            
-def generate_bubblemap_insight(token_name: str, token_symbol: str, total_supply: float, nodes: list[Node]):
-    if not nodes:
-        return "No data available to generate insights."
+       
+from collections import defaultdict
 
-    total_percent = 0
-    dead_wallet = None
-    top_exchanges = []
-    top_individuals = []
-    defi_contracts = []
+
+def generate_advanced_bubblemap_insight(token_name: str, token_symbol: str, bubblemap: BubbleMapData | None) -> str:
+    if not bubblemap:
+        return "No data available to generate insights."
+    nodes, links = bubblemap["nodes"], bubblemap["links"]
+    
+    dead_wallets: list[float] = []
+    sent_amounts = defaultdict(float)
+    received_amounts = defaultdict(float)
+    clusters = defaultdict(set)
 
     for node in nodes:
-        percentage = node.get("percentage", 0)
         name = str(node.get("name", "")).lower()
+        address = node.get("address", "").lower()
+        if "null" in name or "dead" in name or "0xdead" in address:
+            dead_wallets.append(node["percentage"])
+
+    for link in links:
+        src, tgt = link["source"], link["target"]
+        fwd, bwd = link["forward"], link["backward"]
+
+        if fwd > 0:
+            sent_amounts[src] += fwd
+            received_amounts[tgt] += fwd
+            clusters[src].add(tgt)
+            clusters[tgt].add(src)
+
+        if bwd > 0:
+            sent_amounts[tgt] += bwd
+            received_amounts[src] += bwd
+            clusters[src].add(tgt)
+            clusters[tgt].add(src)
+
+    lines = [f"\n\n💡 <b>{token_name} ({token_symbol}) BubbleMap Insights</b>"]
+
+    if dead_wallets:
+        percentage = sum(p for p in dead_wallets)
+        count = len(dead_wallets)
+        lines.append(f"🔥 {count} Burn Wallet{'s' if count > 1 else ''} holds {percentage:.2f}% of supply")
         
-        total_percent += percentage
         
-        # Identify dead/burn wallet
-        if "null" in name or "dead" in name or "0xdead" in node.get("address", "").lower():
-            dead_wallet = node
+    if received_amounts:
+        top_receiver = max(received_amounts.items(), key=lambda x: x[1])
+        idx, amt = top_receiver
+        lines.append(f"📥 Top Receiver: <code>{truncate_address(nodes[idx]["address"])}</code> received {format_large_number(amt)} {token_symbol}")
         
-        # Identify exchanges
-        elif any(keyword in name for keyword in cexs):
-            top_exchanges.append(node)
-            
-            
-        elif node["is_contract"] is True:
-            defi_contracts.append(node)
+    if sent_amounts:
+        top_sender  = max(sent_amounts.items(), key=lambda x: x[1])
+        idx, amt = top_sender 
+        lines.append(f"📤 Top Sender: <code>{truncate_address(nodes[idx]["address"])}</code> received {format_large_number(amt)} {token_symbol}")
+    
 
-        # Otherwise, assume individual/private whale
-        elif percentage >= 0.3:
-            top_individuals.append(node)
+    cluster_loops = [grp for grp in clusters.values() if len(grp) > 5]
+    if cluster_loops:
+        lines.append(f"🔗 Clustered Wallets: {len(cluster_loops)} sets of wallets exchanged large volumes")
 
-    lines = [f"💡 <b>{token_name} ({token_symbol}) BubbleMap Insights </b>\n", f"<b>Total Supply (approx.):</b> {total_supply} {token_symbol}\n", f"<b>Top Holders Overview:</b> The top {len(nodes)} addresses alone hold around {total_percent}% of the total {token_symbol} supply\n", ]
-
-    # Dead wallet insight
-    if dead_wallet:
-        lines.append(f"\n🔥 <b>Burn Wallet</b>\n{truncate_address(dead_wallet['address'])} holds {dead_wallet['percentage']:.2f}% of the total supply. "
-                     f"This suggests a deflationary mechanism or intentional supply reduction.\n")
-
-    # Exchange concentration
-    if top_exchanges:
-        lines.append(f"\n🏦 <b>Top Exchanges Holding {token_symbol}</b>\n")
-        for ex in sorted(top_exchanges, key=lambda x: -x["percentage"])[:5]:
-            lines.append(f"- {ex['name']} holds <b>{ex['percentage']:.2f}%</b> of supply.")
-        lines.append("These wallets are likely used for liquidity and user deposits, but indicate some centralization risk.\n")
-
-    # Individual whales
-    if top_individuals:
-        lines.append("\n🐋 <b>Top Non-Exchange Whales</b>\n")
-        for whale in sorted(top_individuals, key=lambda x: -x["percentage"])[:5]:
-            lines.append(f"- {whale['name']} with <b>{whale['percentage']:.2f}%</b> of supply.")
-        lines.append("These addresses may belong to early investors or team wallets.\n")
-
-    # Overall insight
-    num_wallets_1p = sum(1 for n in nodes if n.get("percentage", 0) >= 1)
-    if num_wallets_1p > 10:
-        decentralization_note = "⚠️ <b>Token appears heavily concentrated</b>, with many wallets holding over 1% of supply."
-    elif num_wallets_1p > 5:
-        decentralization_note = "🔍 <b>Moderately decentralized</b>, but still some large holders to watch."
-    else:
-        decentralization_note = "✅ <b>Supply appears well-distributed</b>, with limited concentration among wallets."
-
-    lines.append(f"\n📊 <b>Summary</b>:\n- Total wallets tracked: {len(nodes)}\n"
-                 f"- Wallets holding ≥ 1%: {num_wallets_1p}\n"
-                 f"{decentralization_note}")
+    top_20_total = sum(received_amounts[i] + sent_amounts[i] for i in sorted(
+        set(received_amounts) | set(sent_amounts), key=lambda x: -(received_amounts[x] + sent_amounts[x])
+    )[:20])
+    overall_flow = sum(received_amounts.values()) + sum(sent_amounts.values())
+    if overall_flow > 0:
+        pct = (top_20_total / overall_flow) * 100
+        lines.append(f"🧠 Transfer Density: Top 20 wallets account for {pct:.2f}% of all observed flow")
 
     return "\n".join(lines)
+

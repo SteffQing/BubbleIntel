@@ -28,10 +28,36 @@ def truncate_address(address, start_length=6, end_length=5):
 
     return address[:start_length] + "..." + address[-end_length:]
 
+def format_small_number(n) -> str:
+    try:
+        price_value = float(n)
 
+        if price_value >= 1:
+            return f"{price_value:.2f}"
+        elif price_value > 0:
+            s = f"{price_value:.8f}"
+            decimal_index = s.find('.')
+            if decimal_index != -1:
+                first_digit_index = -1
+                for i in range(decimal_index + 1, len(s)):
+                    if s[i] != '0':
+                        first_digit_index = i
+                        break
+
+                if first_digit_index != -1:
+                    return f"{price_value:.{first_digit_index + 2 - decimal_index}f}"
+                else:
+                    return "0.00" 
+            else:
+                return f"{price_value:.2f}" 
+        else:
+            return "0.00"
+    except ValueError:
+        return "0.00"
+    
 def format_large_number(n):
     if n < 1_000:
-        return str(n)
+        return format_small_number(n)
     elif n < 1_000_000:
         return f"{n / 1_000:.1f}k".rstrip('0').rstrip('.')
     elif n < 1_000_000_000:
