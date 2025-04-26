@@ -5,6 +5,4 @@ from dotenv import load_dotenv
 load_dotenv()
 
 # Get the environment variables
-BOT_NAME = os.getenv("BOT_NAME")
 BOT_TOKEN = os.getenv("BOT_TOKEN")
-RPC_URL = os.getenv("RPC_URL")

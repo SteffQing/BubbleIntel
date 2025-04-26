@@ -3,17 +3,15 @@ from aiogram import Bot, Dispatcher
 
 from services.httpx import close_client, init_client
 from utils.logger import Logger
-from utils.config import BOT_TOKEN, BOT_NAME
+from utils.config import BOT_TOKEN
 
 from handlers import common
 
 
 if BOT_TOKEN is None:
     raise Exception("BOT_TOKEN is not defined")
-if BOT_NAME is None:
-    raise Exception("BOT_NAME is not defined")
 
-log = Logger(BOT_NAME)
+log = Logger("Bubble Intel Bot")
 log.debug("Bot is loading")
 
 bot = Bot(token=BOT_TOKEN)
