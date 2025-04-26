@@ -54,8 +54,8 @@ The bot will:
 - Provide token data + decentralization score
 
 ## 🧪 Demo & Case Study
-Coming soon: Demo Video & Investigation Case Study
 - [SHIB Case Study](https://gist.github.com/SteffQing/58e8692a2e654d834329113f5dec4980)
+- [Bot Demo Video](https://gist.github.com/SteffQing/58e8692a2e654d834329113f5dec4980)
 
 ### 🧠 Methodologies
 - Screenshot Rendering using headless Chromium with Playwright
