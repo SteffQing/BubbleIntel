@@ -4,7 +4,7 @@ from io import BytesIO
 from services.httpx import get_client
 from datatypes.constants import Network
 from datatypes.bubblemap import AvailabilityResponse, BubbleMapData, ScoreResponse
-from utils.index import format_large_number, truncate_address
+from utils.index import format_dt_update, format_large_number, truncate_address
 
 class BubbleMap:
     async def isIframeAvailable(self, token: str, chain: Network):
@@ -77,7 +77,7 @@ class BubbleMap:
 from collections import defaultdict
 
 
-def generate_advanced_bubblemap_insight(token_name: str, token_symbol: str, bubblemap: BubbleMapData | None) -> str:
+def generate_advanced_bubblemap_insight(token_symbol: str, bubblemap: BubbleMapData | None) -> str:
     if not bubblemap:
         return "No data available to generate insights."
     nodes, links = bubblemap["nodes"], bubblemap["links"]
@@ -109,7 +109,7 @@ def generate_advanced_bubblemap_insight(token_name: str, token_symbol: str, bubb
             clusters[src].add(tgt)
             clusters[tgt].add(src)
 
-    lines = [f"\n\n💡 <b>{token_name} ({token_symbol}) BubbleMap Insights</b>"]
+    lines = [f"\n\n💡 <b>BubbleMap Insights</b> <i>({format_dt_update(bubblemap['dt_update'])})</i>"]
 
     if dead_wallets:
         percentage = sum(p for p in dead_wallets)

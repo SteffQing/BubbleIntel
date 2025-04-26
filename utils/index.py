@@ -1,22 +1,23 @@
-import re
 import asyncio
 from typing import Coroutine, List
+from datetime import datetime, timezone
 
-def is_address_valid(wallet_address:str) -> bool:
-    return bool(re.match(r"^(0x)?[0-9a-fA-F]{40}$", wallet_address))
+def format_dt_update(dt_update: str) -> str:
+    try:
+        updated_time = datetime.strptime(dt_update, "%a, %d %b %Y %H:%M:%S GMT").replace(tzinfo=timezone.utc)
+        now = datetime.now(timezone.utc)
+        diff = now - updated_time
 
-async def process_long_message(message: str, find: str, res):
-    max_message_length = 4096
-    while len(message) > max_message_length or len(message) > 0:
-        if len(message) < max_message_length:
-            await res(message, parse_mode='Markdown')
-            # message = []
+        days = diff.days
+        if days == 0:
+            return "Last updated today"
+        elif days == 1:
+            return "Last updated yesterday"
         else:
-            index = message[:max_message_length].rfind(find)
-            sliced_message = message[:index]
-            await res(sliced_message, parse_mode='Markdown')
-            message = message[index:]
-            
+            return f"Last updated {days} days ago"
+    except Exception:
+        return "Last updated recently"
+
             
 async def promise_all(coroutines: List[Coroutine]):
     return await asyncio.gather(*coroutines)

@@ -16,7 +16,7 @@ def generate_token_caption(
 
     caption = format_token_data(data)
 
-    caption +=  generate_advanced_bubblemap_insight(data["name"], data["symbol"], bubblemap)
+    caption +=  generate_advanced_bubblemap_insight( data["symbol"], bubblemap)
     
 
     caption += format_score_insight(score)
@@ -41,7 +41,8 @@ def format_token_data(data: TokenData):
     rank_badge = f"🏅 Ranked #{rank}" if 0 < rank <= 100 else None
 
     return (
-        f"💠 <b>{name} ({symbol}) Token Info</b>\n"
+        f"<b>{name} ({symbol})</b>\n\n"
+        f"💠 <b>Token Info</b>\n"
         f"{rank_badge + "\n" if rank_badge else ""}"
         f"💵 Price: ${format_small_number(price)}\n"
         f"📊 Market Cap: ${market_cap:,.0f}\n"
