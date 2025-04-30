@@ -40,6 +40,12 @@ Then start the bot:
 python app.py
 ```
 
+To dockerize the bot (To host on Railway or Docker Desktop):
+```bash
+docker build -t bubble-bot .
+docker run --env-file .env bubble-bot
+```
+
 ## 📱 Usage
 Start a chat with your bot and send:
 
@@ -55,7 +61,7 @@ The bot will:
 
 ## 🧪 Demo & Case Study
 - [SHIB Case Study](https://gist.github.com/SteffQing/58e8692a2e654d834329113f5dec4980)
-- [Bot Demo Video](https://gist.github.com/SteffQing/58e8692a2e654d834329113f5dec4980)
+- [Bot Demo Video](https://youtube.com/shorts/kpmUMxqy6Vc?si=rUd2KVQX2ck8VXgy)
 
 ### 🧠 Methodologies
 - Screenshot Rendering using headless Chromium with Playwright
